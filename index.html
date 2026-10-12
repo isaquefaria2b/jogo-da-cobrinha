@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#143b2a" />
+    <title>Jogo da Minhoca</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Trebuchet MS", Arial, sans-serif;
+        background: #10261d;
+        color: #f4f7ed;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        padding: 24px 14px;
+        background:
+          radial-gradient(ellipse at top, #24543a 0, transparent 55%),
+          #10261d;
+      }
+
+      main {
+        width: min(100%, 480px);
+        margin: 0 auto;
+        text-align: center;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: clamp(1.65rem, 7vw, 2.25rem);
+      }
+
+      .subtitle {
+        margin: 0 0 18px;
+        color: #c5d9c4;
+      }
+
+      .panel {
+        padding: 18px;
+        border: 1px solid #456a4f;
+        border-radius: 20px;
+        background: rgb(13 34 25 / 92%);
+        box-shadow: 0 18px 50px rgb(0 0 0 / 25%);
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        text-align: left;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 6px;
+        color: #dce8d8;
+        font-size: 0.9rem;
+      }
+
+      input,
+      select,
+      button {
+        min-height: 44px;
+        border: 1px solid #58755b;
+        border-radius: 10px;
+        font: inherit;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 9px 11px;
+        background: #f5f7ee;
+        color: #1a3021;
+      }
+
+      button {
+        padding: 9px 16px;
+        background: #d8f36a;
+        color: #18321f;
+        font-weight: 800;
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+
+      button:hover:not(:disabled) {
+        background: #e6ff8c;
+      }
+
+      button:disabled {
+        cursor: default;
+        opacity: 0.58;
+      }
+
+      #start-button {
+        width: 100%;
+        margin-top: 12px;
+      }
+
+      .stats {
+        display: flex;
+        justify-content: space-around;
+        gap: 8px;
+        margin: 14px 0 12px;
+        color: #dce8d8;
+      }
+
+      .stats strong {
+        display: block;
+        margin-top: 3px;
+        color: #d8f36a;
+        font-size: 1.2rem;
+      }
+
+      .players-roster {
+        margin: 0 0 14px;
+        padding: 12px;
+        border: 1px solid #456a4f;
+        border-radius: 12px;
+        background: #173526;
+        text-align: left;
+      }
+
+      .players-roster h2 {
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      .players-roster p {
+        margin: 6px 0;
+        color: #c5d9c4;
+        font-size: 0.88rem;
+      }
+
+      #players-list {
+        max-height: 120px;
+        margin: 8px 0;
+        padding-left: 24px;
+        overflow-y: auto;
+        color: #f4f7ed;
+      }
+
+      #players-list li {
+        padding: 2px 0;
+        overflow-wrap: anywhere;
+      }
+
+      .download-link {
+        color: #d8f36a;
+        font-size: 0.9rem;
+      }
+
+      .board-wrap {
+        width: min(100%, 420px);
+        margin: 0 auto;
+        padding: 7px;
+        border: 1px solid #6d915b;
+        border-radius: 14px;
+        background: #24472e;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 8px;
+        touch-action: none;
+      }
+
+      canvas:focus-visible {
+        outline: 3px solid #d8f36a;
+        outline-offset: 3px;
+      }
+
+      #status {
+        min-height: 1.5em;
+        margin: 12px 0 4px;
+        color: #e8f0dd;
+      }
+
+      .help {
+        margin: 8px 0 0;
+        color: #b8cdb7;
+        font-size: 0.88rem;
+      }
+
+      .pad {
+        display: grid;
+        grid-template-columns: repeat(3, 58px);
+        grid-template-rows: repeat(2, 48px);
+        justify-content: center;
+        gap: 6px;
+        margin: 14px auto 0;
+      }
+
+      .pad button {
+        min-height: 48px;
+        padding: 4px;
+        font-size: 1.2rem;
+      }
+
+      .pad-up {
+        grid-column: 2;
+      }
+
+      .pad-left {
+        grid-column: 1;
+        grid-row: 2;
+      }
+
+      .pad-down {
+        grid-column: 2;
+        grid-row: 2;
+      }
+
+      .pad-right {
+        grid-column: 3;
+        grid-row: 2;
+      }
+
+      @media (min-width: 700px) and (pointer: fine) {
+        .pad {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>🐍 Jogo da Minhoca</h1>
+      <p class="subtitle">Coma as maçãs e tente fazer a maior pontuação!</p>
+
+      <section class="panel" aria-label="Jogo da minhoca">
+        <div class="form-row">
+          <div>
+            <label for="player-name">Seu nome</label>
+            <input
+              id="player-name"
+              maxlength="24"
+              placeholder="Digite seu nome"
+              autocomplete="nickname"
+            />
+          </div>
+          <div>
+            <label for="speed">Velocidade</label>
+            <select id="speed">
+              <option value="250">Lenta</option>
+              <option value="160">Normal</option>
+              <option value="90">Rápida</option>
+            </select>
+          </div>
+        </div>
+        <button id="start-button" type="button">Entrar no jogo</button>
+
+        <div class="stats" aria-live="polite">
+          <div>Entradas<strong id="entrants">0</strong></div>
+          <div id="player">Jogador<strong>-</strong></div>
+          <div>Pontuação<strong id="score">0</strong></div>
+        </div>
+
+        <section class="players-roster" aria-labelledby="players-title">
+          <h2 id="players-title">Jogadores que entraram</h2>
+          <p id="players-status" aria-live="polite">Carregando lista de jogadores...</p>
+          <ol id="players-list"></ol>
+          <a class="download-link" href="/jogadores.txt" download="jogadores.txt">
+            Baixar lista em TXT
+          </a>
+        </section>
+
+        <div class="board-wrap">
+          <canvas
+            id="board"
+            width="400"
+            height="400"
+            tabindex="0"
+            aria-label="Tabuleiro de jogo 10 por 10"
+          ></canvas>
+        </div>
+        <p id="status" role="status">Digite seu nome e entre para começar.</p>
+        <p class="help">Use as setas do teclado ou W, A, S, D. No celular, use os botões.</p>
+
+        <div class="pad" aria-label="Controles direcionais">
+          <button class="pad-up" type="button" data-direction="up" aria-label="Cima">▲</button>
+          <button class="pad-left" type="button" data-direction="left" aria-label="Esquerda">◀</button>
+          <button class="pad-down" type="button" data-direction="down" aria-label="Baixo">▼</button>
+          <button class="pad-right" type="button" data-direction="right" aria-label="Direita">▶</button>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      "use strict";
+
+      const GRID_SIZE = 10;
+      const CELL_SIZE = 40;
+      const POINTS_PER_APPLE = 10;
+      const canvas = document.querySelector("#board");
+      const context = canvas.getContext("2d");
+      const nameInput = document.querySelector("#player-name");
+      const speedSelect = document.querySelector("#speed");
+      const startButton = document.querySelector("#start-button");
+      const entrantsLabel = document.querySelector("#entrants");
+      const playerLabel = document.querySelector("#player");
+      const scoreLabel = document.querySelector("#score");
+      const statusLabel = document.querySelector("#status");
+      const playersStatus = document.querySelector("#players-status");
+      const playersList = document.querySelector("#players-list");
+
+      let snake = [];
+      let apple = null;
+      let direction = { x: 1, y: 0 };
+      let nextDirection = direction;
+      let score = 0;
+      let running = false;
+      let joining = false;
+      let timerId = null;
+
+      function renderPlayers(names) {
+        entrantsLabel.textContent = String(names.length);
+        playersList.replaceChildren();
+        names.forEach((name) => {
+          const item = document.createElement("li");
+          item.textContent = name;
+          playersList.append(item);
+        });
+        playersStatus.textContent = names.length
+          ? `${names.length} entrada(s) registrada(s) neste jogo.`
+          : "Ainda não há jogadores registrados.";
+      }
+
+      async function refreshPlayers() {
+        try {
+          const response = await fetch("/api/players", { cache: "no-store" });
+          const result = await response.json();
+          if (!response.ok) {
+            throw new Error(result.error || "Não foi possível carregar os jogadores.");
+          }
+          renderPlayers(result.names);
+        } catch (error) {
+          playersStatus.textContent =
+            `${error.message} Abra o jogo com o comando py server.py.`;
+        }
+      }
+
+      function randomApple() {
+        const emptyCells = [];
+        for (let y = 0; y < GRID_SIZE; y += 1) {
+          for (let x = 0; x < GRID_SIZE; x += 1) {
+            if (!snake.some((segment) => segment.x === x && segment.y === y)) {
+              emptyCells.push({ x, y });
+            }
+          }
+        }
+        return emptyCells.length
+          ? emptyCells[Math.floor(Math.random() * emptyCells.length)]
+          : null;
+      }
+
+      function drawBoard() {
+        const grass = ["#83c95b", "#78bf50"];
+        for (let y = 0; y < GRID_SIZE; y += 1) {
+          for (let x = 0; x < GRID_SIZE; x += 1) {
+            const left = x * CELL_SIZE;
+            const top = y * CELL_SIZE;
+            context.fillStyle = grass[(x + y) % grass.length];
+            context.fillRect(left, top, CELL_SIZE, CELL_SIZE);
+            if ((x + y) % 2 === 0) {
+              context.strokeStyle = "#69ad48";
+              context.lineWidth = 2;
+              context.beginPath();
+              context.moveTo(left + 9, top + 34);
+              context.lineTo(left + 12, top + 29);
+              context.moveTo(left + 13, top + 35);
+              context.lineTo(left + 16, top + 30);
+              context.stroke();
+            }
+          }
+        }
+
+        context.strokeStyle = "#68a746";
+        context.lineWidth = 1;
+        for (let cell = 0; cell <= GRID_SIZE; cell += 1) {
+          const position = cell * CELL_SIZE + 0.5;
+          context.beginPath();
+          context.moveTo(position, 0);
+          context.lineTo(position, canvas.height);
+          context.moveTo(0, position);
+          context.lineTo(canvas.width, position);
+          context.stroke();
+        }
+
+        if (apple) {
+          const centerX = apple.x * CELL_SIZE + CELL_SIZE / 2;
+          const centerY = apple.y * CELL_SIZE + CELL_SIZE / 2 + 3;
+          context.strokeStyle = "#68401e";
+          context.lineWidth = 3;
+          context.beginPath();
+          context.moveTo(centerX, centerY - 12);
+          context.lineTo(centerX + 2, centerY - 19);
+          context.stroke();
+          context.fillStyle = "#2f9e50";
+          context.beginPath();
+          context.ellipse(centerX + 8, centerY - 16, 6, 3, -0.45, 0, Math.PI * 2);
+          context.fill();
+          context.fillStyle = "#df2938";
+          context.strokeStyle = "#a41927";
+          context.lineWidth = 2;
+          context.beginPath();
+          context.arc(centerX, centerY, 13, 0, Math.PI * 2);
+          context.fill();
+          context.stroke();
+          context.fillStyle = "#ff9a9a";
+          context.beginPath();
+          context.ellipse(centerX - 4, centerY - 4, 2.5, 4, -0.5, 0, Math.PI * 2);
+          context.fill();
+        }
+
+        if (snake.length > 1) {
+          context.strokeStyle = "#208b48";
+          context.lineWidth = 32;
+          context.lineCap = "round";
+          context.lineJoin = "round";
+          context.beginPath();
+          snake.forEach((segment, index) => {
+            const x = segment.x * CELL_SIZE + CELL_SIZE / 2;
+            const y = segment.y * CELL_SIZE + CELL_SIZE / 2;
+            if (index === 0) context.moveTo(x, y);
+            else context.lineTo(x, y);
+          });
+          context.stroke();
+        }
+
+        snake.slice(1).forEach((segment) => {
+          const centerX = segment.x * CELL_SIZE + CELL_SIZE / 2;
+          const centerY = segment.y * CELL_SIZE + CELL_SIZE / 2;
+          context.fillStyle = "#27ae60";
+          context.strokeStyle = "#176b3a";
+          context.lineWidth = 2;
+          context.beginPath();
+          context.arc(centerX, centerY, 17, 0, Math.PI * 2);
+          context.fill();
+          context.stroke();
+          context.fillStyle = "#8ce59a";
+          context.beginPath();
+          context.arc(centerX - 6, centerY - 6, 3, 0, Math.PI * 2);
+          context.arc(centerX + 7, centerY + 6, 2.5, 0, Math.PI * 2);
+          context.fill();
+        });
+
+        if (snake.length) {
+          const head = snake[0];
+          const centerX = head.x * CELL_SIZE + CELL_SIZE / 2;
+          const centerY = head.y * CELL_SIZE + CELL_SIZE / 2;
+          context.fillStyle = "#35c759";
+          context.strokeStyle = "#176b3a";
+          context.lineWidth = 2;
+          context.beginPath();
+          context.arc(centerX, centerY, 18, 0, Math.PI * 2);
+          context.fill();
+          context.stroke();
+
+          let eyes;
+          if (direction.x > 0) eyes = [[centerX + 5, centerY - 7], [centerX + 5, centerY + 7]];
+          else if (direction.x < 0) eyes = [[centerX - 5, centerY - 7], [centerX - 5, centerY + 7]];
+          else if (direction.y < 0) eyes = [[centerX - 7, centerY - 5], [centerX + 7, centerY - 5]];
+          else eyes = [[centerX - 7, centerY + 5], [centerX + 7, centerY + 5]];
+
+          eyes.forEach(([x, y]) => {
+            context.fillStyle = "#fff";
+            context.beginPath();
+            context.arc(x, y, 4, 0, Math.PI * 2);
+            context.fill();
+            context.fillStyle = "#173321";
+            context.beginPath();
+            context.arc(x + direction.x, y + direction.y, 1.7, 0, Math.PI * 2);
+            context.fill();
+          });
+        }
+      }
+
+      function finishGame(message) {
+        running = false;
+        window.clearTimeout(timerId);
+        timerId = null;
+        startButton.disabled = false;
+        startButton.textContent = "Jogar novamente";
+        statusLabel.textContent = `${message} Pontuação final: ${score}.`;
+      }
+
+      function tick() {
+        if (!running) return;
+
+        direction = nextDirection;
+        const nextHead = {
+          x: snake[0].x + direction.x,
+          y: snake[0].y + direction.y,
+        };
+        if (
+          nextHead.x < 0 ||
+          nextHead.x >= GRID_SIZE ||
+          nextHead.y < 0 ||
+          nextHead.y >= GRID_SIZE
+        ) {
+          finishGame("Fim de jogo! Você bateu na parede.");
+          return;
+        }
+
+        const ateApple = nextHead.x === apple.x && nextHead.y === apple.y;
+        const bodyToCheck = ateApple ? snake : snake.slice(0, -1);
+        if (bodyToCheck.some((segment) => segment.x === nextHead.x && segment.y === nextHead.y)) {
+          finishGame("Fim de jogo! A minhoca bateu nela mesma.");
+          return;
+        }
+
+        snake.unshift(nextHead);
+        if (ateApple) {
+          score += POINTS_PER_APPLE;
+          scoreLabel.textContent = String(score);
+          apple = randomApple();
+          if (!apple) {
+            drawBoard();
+            finishGame("Parabéns! Você preencheu toda a grade.");
+            return;
+          }
+        } else {
+          snake.pop();
+        }
+
+        drawBoard();
+        timerId = window.setTimeout(tick, Number(speedSelect.value));
+      }
+
+      async function startGame() {
+        if (running || joining) return;
+        const playerName = nameInput.value.trim();
+        if (!playerName) {
+          statusLabel.textContent = "Digite seu nome antes de entrar.";
+          nameInput.focus();
+          return;
+        }
+
+        joining = true;
+        startButton.disabled = true;
+        statusLabel.textContent = "Registrando sua entrada...";
+        try {
+          const response = await fetch("/api/players", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: playerName }),
+          });
+          const result = await response.json();
+          if (!response.ok) {
+            throw new Error(result.error || "Não foi possível registrar sua entrada.");
+          }
+          renderPlayers(result.names);
+        } catch (error) {
+          statusLabel.textContent =
+            `${error.message} Inicie o servidor com py server.py.`;
+          startButton.disabled = false;
+          joining = false;
+          return;
+        }
+
+        playerLabel.querySelector("strong").textContent = playerName;
+        score = 0;
+        scoreLabel.textContent = "0";
+        snake = [{ x: 4, y: 5 }, { x: 3, y: 5 }];
+        direction = { x: 1, y: 0 };
+        nextDirection = direction;
+        apple = randomApple();
+        running = true;
+        startButton.disabled = true;
+        startButton.textContent = "Em andamento";
+        statusLabel.textContent = "Pegue as maçãs e evite as paredes e a si mesma!";
+        drawBoard();
+        canvas.focus({ preventScroll: true });
+        joining = false;
+        timerId = window.setTimeout(tick, Number(speedSelect.value));
+      }
+
+      function turn(newDirection) {
+        if (!running) return;
+        if (
+          newDirection.x === -nextDirection.x &&
+          newDirection.y === -nextDirection.y
+        ) return;
+        nextDirection = newDirection;
+      }
+
+      const directions = {
+        ArrowUp: { x: 0, y: -1 },
+        w: { x: 0, y: -1 },
+        ArrowDown: { x: 0, y: 1 },
+        s: { x: 0, y: 1 },
+        ArrowLeft: { x: -1, y: 0 },
+        a: { x: -1, y: 0 },
+        ArrowRight: { x: 1, y: 0 },
+        d: { x: 1, y: 0 },
+      };
+
+      document.addEventListener("keydown", (event) => {
+        if (event.target.matches("input, select, textarea")) return;
+        const newDirection = directions[event.key] || directions[event.key.toLowerCase()];
+        if (newDirection) {
+          event.preventDefault();
+          turn(newDirection);
+        }
+      });
+
+      document.querySelectorAll("[data-direction]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const controls = {
+            up: { x: 0, y: -1 },
+            down: { x: 0, y: 1 },
+            left: { x: -1, y: 0 },
+            right: { x: 1, y: 0 },
+          };
+          turn(controls[button.dataset.direction]);
+        });
+      });
+
+      startButton.addEventListener("click", startGame);
+      nameInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") startGame();
+      });
+      drawBoard();
+      refreshPlayers();
+      window.setInterval(refreshPlayers, 5000);
+    </script>
+  </body>
+</html>
