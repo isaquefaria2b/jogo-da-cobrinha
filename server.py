@@ -1,3 +1,6 @@
+import base64
+import binascii
+import hmac
 import json
 import os
 import threading
@@ -12,6 +15,8 @@ MAX_NAME_LENGTH = 24
 MAX_REQUEST_BYTES = 2048
 PLAYERS_LOCK = threading.Lock()
 PORT = int(os.environ.get("PORT", "8000"))
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+ADMIN_USERNAME = "admin"
 
 
 class GameRequestHandler(BaseHTTPRequestHandler):
@@ -30,6 +35,37 @@ class GameRequestHandler(BaseHTTPRequestHandler):
     def send_json(self, status, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_bytes(status, "application/json; charset=utf-8", body)
+
+    def is_admin(self):
+        authorization = self.headers.get("Authorization", "")
+        if not authorization.startswith("Basic ") or not ADMIN_PASSWORD:
+            return False
+
+        try:
+            credentials = base64.b64decode(
+                authorization[6:], validate=True
+            ).decode("utf-8")
+            username, password = credentials.split(":", 1)
+        except (binascii.Error, UnicodeDecodeError, ValueError):
+            return False
+
+        valid_username = hmac.compare_digest(username, ADMIN_USERNAME)
+        valid_password = hmac.compare_digest(password, ADMIN_PASSWORD)
+        return valid_username and valid_password
+
+    def require_admin(self):
+        if self.is_admin():
+            return True
+
+        self.send_response(401)
+        self.send_header(
+            "WWW-Authenticate",
+            'Basic realm="Lista privada de jogadores", charset="UTF-8"',
+        )
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+        return False
 
     def read_player_names(self):
         if not PLAYERS_FILE.exists():
@@ -56,7 +92,32 @@ class GameRequestHandler(BaseHTTPRequestHandler):
             self.send_bytes(200, "text/html; charset=utf-8", body)
             return
 
+        if path == "/admin":
+            if not self.require_admin():
+                return
+            try:
+                body = (APP_DIR / "admin.html").read_bytes()
+            except OSError as error:
+                self.log_error("Não foi possível abrir admin.html: %s", error)
+                self.send_json(500, {"error": "Não foi possível abrir a área privada."})
+                return
+            self.send_bytes(200, "text/html; charset=utf-8", body)
+            return
+
+        if path == "/api/entrants":
+            try:
+                with PLAYERS_LOCK:
+                    count = len(self.read_player_names())
+            except OSError as error:
+                self.log_error("Não foi possível contar as entradas: %s", error)
+                self.send_json(500, {"error": "Não foi possível contar as entradas."})
+                return
+            self.send_json(200, {"count": count})
+            return
+
         if path == "/api/players":
+            if not self.require_admin():
+                return
             try:
                 with PLAYERS_LOCK:
                     names = self.read_player_names()
@@ -68,6 +129,8 @@ class GameRequestHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/jogadores.txt":
+            if not self.require_admin():
+                return
             try:
                 with PLAYERS_LOCK:
                     body = PLAYERS_FILE.read_bytes() if PLAYERS_FILE.exists() else b""
@@ -133,10 +196,16 @@ class GameRequestHandler(BaseHTTPRequestHandler):
             self.send_json(500, {"error": "Não foi possível salvar o jogador no arquivo."})
             return
 
-        self.send_json(201, {"count": len(names), "names": names})
+        self.send_json(201, {"count": len(names)})
 
 
 def main():
+    if not ADMIN_PASSWORD:
+        raise SystemExit(
+            "Configure a variável de ambiente ADMIN_PASSWORD antes de iniciar o servidor. "
+            "No PowerShell, use: $env:ADMIN_PASSWORD = 'sua-senha-segura'"
+        )
+
     PLAYERS_FILE.touch(exist_ok=True)
     server = ThreadingHTTPServer(("0.0.0.0", PORT), GameRequestHandler)
     print(f"Jogo iniciado na porta {PORT}.")

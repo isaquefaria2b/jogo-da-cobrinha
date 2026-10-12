@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Lista privada de jogadores</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Trebuchet MS", Arial, sans-serif;
+        background: #10261d;
+        color: #f4f7ed;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px 14px;
+      }
+
+      main {
+        width: min(100%, 560px);
+        margin: 0 auto;
+        padding: 22px;
+        border: 1px solid #456a4f;
+        border-radius: 18px;
+        background: #0d2219;
+      }
+
+      h1 {
+        margin-top: 0;
+      }
+
+      #status {
+        color: #c5d9c4;
+      }
+
+      #players {
+        padding-left: 25px;
+      }
+
+      #players li {
+        padding: 4px 0;
+        overflow-wrap: anywhere;
+      }
+
+      a,
+      button {
+        display: inline-block;
+        margin: 8px 10px 0 0;
+        padding: 10px 14px;
+        border: 1px solid #58755b;
+        border-radius: 9px;
+        background: #d8f36a;
+        color: #18321f;
+        font: inherit;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      .back {
+        background: transparent;
+        color: #d8f36a;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Lista privada de jogadores</h1>
+      <p id="status" role="status">Carregando nomes...</p>
+      <ol id="players"></ol>
+      <a href="/jogadores.txt" download="jogadores.txt">Baixar jogadores.txt</a>
+      <button id="refresh" type="button">Atualizar lista</button>
+      <a class="back" href="/">Voltar ao jogo</a>
+    </main>
+    <script>
+      "use strict";
+
+      const status = document.querySelector("#status");
+      const list = document.querySelector("#players");
+
+      async function loadPlayers() {
+        status.textContent = "Carregando nomes...";
+        try {
+          const response = await fetch("/api/players", { cache: "no-store" });
+          const result = await response.json();
+          if (!response.ok) {
+            throw new Error(result.error || "Não foi possível carregar a lista.");
+          }
+
+          list.replaceChildren();
+          result.names.forEach((name) => {
+            const item = document.createElement("li");
+            item.textContent = name;
+            list.append(item);
+          });
+          status.textContent = `${result.count} jogador(es) registrado(s).`;
+        } catch (error) {
+          status.textContent = `Erro ao carregar os nomes: ${error.message}`;
+        }
+      }
+
+      document.querySelector("#refresh").addEventListener("click", loadPlayers);
+      loadPlayers();
+    </script>
+  </body>
+</html>

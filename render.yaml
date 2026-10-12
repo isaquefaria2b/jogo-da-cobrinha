@@ -5,3 +5,6 @@ services:
     plan: free
     buildCommand: python -m compileall -q server.py
     startCommand: python server.py
+    envVars:
+      - key: ADMIN_PASSWORD
+        sync: false

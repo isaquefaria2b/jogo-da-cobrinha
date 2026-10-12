@@ -119,44 +119,6 @@
         font-size: 1.2rem;
       }
 
-      .players-roster {
-        margin: 0 0 14px;
-        padding: 12px;
-        border: 1px solid #456a4f;
-        border-radius: 12px;
-        background: #173526;
-        text-align: left;
-      }
-
-      .players-roster h2 {
-        margin: 0;
-        font-size: 1rem;
-      }
-
-      .players-roster p {
-        margin: 6px 0;
-        color: #c5d9c4;
-        font-size: 0.88rem;
-      }
-
-      #players-list {
-        max-height: 120px;
-        margin: 8px 0;
-        padding-left: 24px;
-        overflow-y: auto;
-        color: #f4f7ed;
-      }
-
-      #players-list li {
-        padding: 2px 0;
-        overflow-wrap: anywhere;
-      }
-
-      .download-link {
-        color: #d8f36a;
-        font-size: 0.9rem;
-      }
-
       .board-wrap {
         width: min(100%, 420px);
         margin: 0 auto;
@@ -265,14 +227,7 @@
           <div>Pontuação<strong id="score">0</strong></div>
         </div>
 
-        <section class="players-roster" aria-labelledby="players-title">
-          <h2 id="players-title">Jogadores que entraram</h2>
-          <p id="players-status" aria-live="polite">Carregando lista de jogadores...</p>
-          <ol id="players-list"></ol>
-          <a class="download-link" href="/jogadores.txt" download="jogadores.txt">
-            Baixar lista em TXT
-          </a>
-        </section>
+        <p><a href="/admin">Área privada do administrador</a></p>
 
         <div class="board-wrap">
           <canvas
@@ -310,8 +265,6 @@
       const playerLabel = document.querySelector("#player");
       const scoreLabel = document.querySelector("#score");
       const statusLabel = document.querySelector("#status");
-      const playersStatus = document.querySelector("#players-status");
-      const playersList = document.querySelector("#players-list");
 
       let snake = [];
       let apple = null;
@@ -322,30 +275,17 @@
       let joining = false;
       let timerId = null;
 
-      function renderPlayers(names) {
-        entrantsLabel.textContent = String(names.length);
-        playersList.replaceChildren();
-        names.forEach((name) => {
-          const item = document.createElement("li");
-          item.textContent = name;
-          playersList.append(item);
-        });
-        playersStatus.textContent = names.length
-          ? `${names.length} entrada(s) registrada(s) neste jogo.`
-          : "Ainda não há jogadores registrados.";
-      }
-
-      async function refreshPlayers() {
+      async function refreshEntrants() {
         try {
-          const response = await fetch("/api/players", { cache: "no-store" });
+          const response = await fetch("/api/entrants", { cache: "no-store" });
           const result = await response.json();
           if (!response.ok) {
-            throw new Error(result.error || "Não foi possível carregar os jogadores.");
+            throw new Error(result.error || "Não foi possível atualizar o contador.");
           }
-          renderPlayers(result.names);
-        } catch (error) {
-          playersStatus.textContent =
-            `${error.message} Abra o jogo com o comando py server.py.`;
+          entrantsLabel.textContent = String(result.count);
+        } catch {
+          statusLabel.textContent =
+            "Não foi possível atualizar o contador. Verifique a conexão com o jogo.";
         }
       }
 
@@ -559,7 +499,7 @@
           if (!response.ok) {
             throw new Error(result.error || "Não foi possível registrar sua entrada.");
           }
-          renderPlayers(result.names);
+          entrantsLabel.textContent = String(result.count);
         } catch (error) {
           statusLabel.textContent =
             `${error.message} Inicie o servidor com py server.py.`;
@@ -631,8 +571,8 @@
         if (event.key === "Enter") startGame();
       });
       drawBoard();
-      refreshPlayers();
-      window.setInterval(refreshPlayers, 5000);
+      refreshEntrants();
+      window.setInterval(refreshEntrants, 5000);
     </script>
   </body>
 </html>
